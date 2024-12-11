@@ -1,0 +1,13 @@
+{
+  "name": "week-1",
+  "version": "1.0.0",
+  "author": "Martin Ivanov Ivanov",
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test",
+    "test:coverage": "forge coverage",
+    "lint": "forge fmt --check && solhint \"{src,test}/**/*.sol\"",
+    "clean": "rm -rf build"
+  }
+}
