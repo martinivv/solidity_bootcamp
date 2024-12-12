@@ -59,7 +59,7 @@ contract SovereignToken is ERC1363Capped, Ownable2Step {
         returns (bool)
     {
         uint256 fromBalance = balanceOf(from_);
-        _transfer(from_, to_, amount_);
+        super._update(from_, to_, amount_);
         _afterTokenTransfer(fromBalance, balanceOf(from_));
         return true;
     }
