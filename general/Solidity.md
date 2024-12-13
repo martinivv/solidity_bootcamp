@@ -43,3 +43,83 @@
 
 <br>
 <br>
+
+## TRANSIENT STORAGE
+
+- Partially introduced in version 0.8.24;
+- Behaves as a key-value store similar to storage;
+- Scoped to the current transaction (not a function call!);
+- As cheap as warm storage access - `TSTORE` are `TLOAD` are priced at 100 gas;
+- [EIP-1153](https://eips.ethereum.org/EIPS/eip-1153)
+
+A canonical use case is implementing a cheaper reentrancy guard:
+
+```solidity
+modifier nonreentrant {
+  assembly {
+    if tload(0) { revert(0, 0) }
+    tstore(0, 1)
+  }
+  _;
+  // Unlocks the guard, making the pattern composable.
+  // After the function exits, it can be called again, even in the same transaction.
+  assembly {
+    tstore(0, 0)
+  }
+}
+```
+
+### Composability in Computer Science & Solidity
+
+- Composability concerns how **components interact**, **treating them as self-contained, stateless units**;
+- The EVM do ensure composable behavior:
+  - A sequence of calls to a contract within one transaction behaves identically to those same calls spread over multiple transactions;
+- Use cases like batching calls across transactions focus on reducing gas costs. Transient storage **may** breaks such use cases since composability can no longer be taken for granted.
+
+```solidity
+contract MulService {
+    function setMultiplier(uint multiplier) external {
+        assembly {
+            tstore(0, multiplier)
+        }
+    }
+
+    function getMultiplier() private view returns (uint multiplier) {
+        assembly {
+            multiplier := tload(0)
+        }
+    }
+
+    function multiply(uint value) external view returns (uint) {
+        return value * getMultiplier();
+    }
+}
+```
+
+`setMultiplier(42)` ➜ `multiply(1)` ➜ `multiply(2)`.
+
+➥ The transient storage is not cleared between calls!
+
+> **The lack of composability is not an inherent property of transient storage!**
+
+This _issue_ could be avoided if the rules for clearing transient storage were adjusted.
+
+**Current behavior:**
+
+- Transient storage is cleared for all contracts simultaneously at the end of a transaction.
+
+**Proposed behavior:**
+
+- Clear transient storage for a contract when no function belonging to it is active on the call stack.
+- Means transient storage could reset multiple times within a transaction, resolving issues like the example above.
+
+### Recommendations
+
+1. **Clear transient storage completely at the end of each call!**
+
+   - While it might seem tempting to use it as a replacement for in-memory mappings, this can be extremely risky❗
+
+2. Adjust clearing rules to align with composable behavior to preserve compatibility across use cases.
+
+<br>
+<br>
