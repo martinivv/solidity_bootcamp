@@ -1,28 +1,23 @@
-// solhint-disable ordering
-// solhint-disable no-inline-assembly
-
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.27;
+pragma solidity 0.8.26;
 
 import {ERC20Capped, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import {ERC165, IERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC1363} from "@openzeppelin/contracts/interfaces/IERC1363.sol";
-import {
-    ERC1363Utils,
-    IERC1363Receiver,
-    IERC1363Spender
-} from "@openzeppelin/contracts/token/ERC20/utils/ERC1363Utils.sol";
-import {Errors} from "@/interfaces/Errors.sol";
+import {ERC1363Utils} from "@openzeppelin/contracts/token/ERC20/utils/ERC1363Utils.sol";
 
 /**
- * @title ERC1363Capped
  * @notice Sets an `ERC1363Capped` interface extending `ERC20Capped`.
- * @author Martin Ivanov
  */
 abstract contract ERC1363Capped is ERC20Capped, ERC165, IERC1363 {
     /**
+     * @notice Indicates a failure within the {approve} part of a `approveAndCall` operation.
+     */
+    error ERC1363ApproveFailed(address spender, uint256 value);
+
+    /**
      * @dev Sets the values for {name}, {symbol}, and {cap} as part the
-     * `ERC20Capped` extension.
+     *      `ERC20Capped` extension.
      */
     constructor(
         string memory name_,
@@ -34,7 +29,7 @@ abstract contract ERC1363Capped is ERC20Capped, ERC165, IERC1363 {
     {}
 
     /**
-     * @dev Checks if a given interface is supported.
+     * @inheritdoc IERC165
      */
     function supportsInterface(bytes4 _interfaceId)
         public
@@ -49,6 +44,7 @@ abstract contract ERC1363Capped is ERC20Capped, ERC165, IERC1363 {
     /**
      * @dev Transfers tokens and triggers a callback on the recipient side.
      */
+    // solhint-disable-next-line ordering
     function transferAndCall(address _to, uint256 _amount) public virtual override returns (bool) {
         return transferAndCall(_to, _amount, "");
     }
@@ -133,7 +129,7 @@ abstract contract ERC1363Capped is ERC20Capped, ERC165, IERC1363 {
         returns (bool)
     {
         if (!approve(spender_, amount_)) {
-            revert Errors.ERC1363ApproveFailed(spender_, amount_);
+            revert ERC1363ApproveFailed(spender_, amount_);
         }
         ERC1363Utils.checkOnERC1363ApprovalReceived(_msgSender(), spender_, amount_, data);
         return true;
