@@ -1,5 +1,7 @@
-# Compiler files
+# Compiler files / Cache
 build/
+cache/
+node_modules/
 
 # Ignores development broadcast logs
 !/broadcast

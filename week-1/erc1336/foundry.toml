@@ -1,11 +1,12 @@
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 
 [profile.default]
-solc_version = "0.8.27"
+solc_version = "0.8.26"
 optimizer_runs = 222
+via_ir = true
 remappings = [
 	'forge-std/=lib/forge-std/src/',
-	'@openzeppelin-contracts/=lib/openzeppelin-contracts/contracts',
+	'@openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/',
 	"@/=src/",
 ]
 out = "build/out"

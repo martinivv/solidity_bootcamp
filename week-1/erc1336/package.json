@@ -5,7 +5,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "forge build",
-    "test": "forge test",
+    "test": "forge test --fuzz-runs 1000 -vvv",
     "test:coverage": "forge coverage",
     "lint": "forge fmt --check && solhint \"{src,test}/**/*.sol\"",
     "clean": "rm -rf build"
