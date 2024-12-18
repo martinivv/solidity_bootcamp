@@ -6,14 +6,15 @@ optimizer_runs = 222
 via_ir = true
 remappings = [
 	'forge-std/=lib/forge-std/src/',
-	'@openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/',
+	'@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/',
 	"@/=src/",
 ]
 out = "build/out"
 cache_path = "build/cache"
-src = "src/contracts"
+src = "src"
 libs = ["lib"]
 test = "src/test"
+extra_output = ["ir", "irOptimized"]
 
 [fmt]
 line_length = 110

@@ -128,7 +128,7 @@ contract GovernedToken is IGovernedToken, Ownable2Step, ERC1363Capped {
      *
      * Here the method overrides the ERC20 `_update` method adding an additional layer of logic.
      */
-    function _update(address from_, address to_, uint256 value_) internal virtual override {
+    function _update(address from_, address to_, uint256 value_) internal override {
         if (paused) {
             revert IGovernedTokenErrors.TokenPaused();
         }

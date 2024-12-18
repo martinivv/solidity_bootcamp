@@ -9,12 +9,10 @@ interface IGovernedToken {
      * @notice Emitted when the contract is paused or unpaused.
      */
     event Paused(bool indexed paused);
-
     /**
      * @notice Emitted on an updated restriction.
      */
     event UpdatedRestriction(address indexed account, bytes1 indexed restriction);
-
     /**
      * @notice Emitted when a special transfer has been made.
      */

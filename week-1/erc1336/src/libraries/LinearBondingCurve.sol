@@ -2,19 +2,32 @@
 pragma solidity 0.8.26;
 
 /**
- * @notice Provides linear bonding curve utility functions.
- * @author Martin Ivanov
+ * @notice This library implements a linear bonding curve to calculate the price and return values
+ * for tokens based on a bonding curve model.
+ *
+ * The library provides functions for calculating:
+ *
+ * - Cost of purchasing tokens;
+ * - ETH return when selling tokens;
+ * - Validation checks for gas price and fractional values.
+ *
+ * The bonding curve function used is linear:
+ *
+ *  `Price(n) = initialPrice + slope * n`
+ *
+ * @dev This library is for demonstration purposes only.
  */
 library LinearBondingCurve {
     uint256 private constant SCALE = 1e18;
 
     error GasPriceExceedsLimit(uint256 currentGasPrice, uint256 maxGasPrice);
     error FractionalAmountNotSupported(uint256 providedAmount);
+    error InsufficientReserveBalance();
 
     /**
-     * @notice Enforces that the transaction gas price does not exceed the maximum allowed value.
-     * @dev Helps control gas costs and may deter certain front-running and sandwich attacks
-     *      by restricting high gas price bids, but does not fully mitigate these attack vectors.
+     * @notice Ensures that the transaction gas price does not exceed the specified maximum.
+     * @dev Restricts high gas price transactions, which can mitigate certain front-running attacks.
+     *      However, it does not fully eliminate such risks.
      */
     function enforceGasPrice(uint256 maxGasPrice) internal view {
         if (tx.gasprice > maxGasPrice) {
@@ -23,69 +36,61 @@ library LinearBondingCurve {
     }
 
     /**
-     * @notice Checks that an ETH or token amount is not fractional.
+     * @notice Validates that an amount (ETH or tokens) is not fractional.
+     * @dev Amounts must align with whole units in the `SCALE` defined system.
      */
     function enforceNotFraction(uint256 amount) internal pure {
-        if (amount % 1 ether != 0) {
+        if (amount % SCALE != 0) {
             revert FractionalAmountNotSupported(amount);
         }
     }
 
     /**
-     * @notice Calculates the cost in ETH for buying a given amount of tokens.
-     * @param currentSupply The current total token supply in Wei.
-     * @param tokenAmount The amount of tokens to buy in Wei.
-     * @param initialPrice The initial price of the token.
-     * @param slope The price increment per token.
-     * @return finalCost The total cost in ETH for the specified amount of tokens.
+     * @notice Calculates the cost of purchasing a specific number of tokens.
      */
     function calculateBuyCost(
         uint256 currentSupply,
-        uint256 tokenAmount,
+        uint256 value,
         uint256 initialPrice,
         uint256 slope
     )
         internal
         pure
-        returns (uint256 finalCost)
+        returns (uint256 totalCost)
     {
-        uint256 supply = currentSupply / SCALE;
-        uint256 amount = tokenAmount / SCALE;
+        if (value == 0) {
+            return 0;
+        }
+        uint256 startPrice = initialPrice + (slope * currentSupply / SCALE);
+        uint256 endPrice = startPrice + (slope * (value - SCALE) / SCALE);
 
-        // Calculate the start and end prices
-        uint256 startPrice = initialPrice + (slope * supply);
-        uint256 endPrice = startPrice + (slope * (amount - 1));
-
-        // Apply the formula for cost calculation
-        finalCost = ((startPrice + endPrice) * amount) / 2;
+        totalCost = (startPrice + endPrice) * value / (2 * SCALE);
     }
 
     /**
-     * @notice Calculates the ETH amount to return for selling a given amount of tokens.
-     * @param currentSupply The current total token supply in Wei.
-     * @param tokenAmount The amount of tokens to sell in Wei.
-     * @param initialPrice The initial price of the token.
-     * @param slope The price increment per token.
-     * @return refund The total ETH refund for the specified amount of tokens.
+     * @notice Calculates the ETH return when selling a specific number of tokens,
+     * capped by the current reserve balance.
      */
     function calculateSellReturn(
         uint256 currentSupply,
-        uint256 tokenAmount,
+        uint256 tokensToSell,
         uint256 initialPrice,
-        uint256 slope
+        uint256 slope,
+        uint256 reserveBalance
     )
         internal
         pure
-        returns (uint256 refund)
+        returns (uint256 return_)
     {
-        uint256 supply = currentSupply / SCALE;
-        uint256 amount = tokenAmount / SCALE;
+        if (currentSupply == 0 || tokensToSell == 0) {
+            return 0;
+        }
+        uint256 startPrice = initialPrice + (slope * (currentSupply - tokensToSell) / SCALE);
+        uint256 endPrice = initialPrice + (slope * (currentSupply - SCALE) / SCALE);
 
-        // Calculate the start and end prices
-        uint256 startPrice = initialPrice + (slope * (supply - amount));
-        uint256 endPrice = startPrice + (slope * (amount - 1));
-
-        // Apply the formula for refund calculation
-        refund = ((startPrice + endPrice) * amount) / 2;
+        return_ = (startPrice + endPrice) * tokensToSell / (2 * SCALE);
+        if (return_ > reserveBalance) {
+            revert InsufficientReserveBalance();
+        }
     }
 }

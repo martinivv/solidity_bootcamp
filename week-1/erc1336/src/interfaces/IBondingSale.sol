@@ -24,4 +24,33 @@ interface IBondingSale {
      * @notice Emitted when the maximum gas price has been updated.
      */
     event MaxGasPriceUpdated(uint256 gasPrice);
+
+    /* ============================================================================================== */
+    /*                                             ERC1363                                            */
+    /* ============================================================================================== */
+
+    /**
+     * @notice Called when tokens are transferred as part of the ERC1363's
+     *         {transferAndCall / transferFromAndCall} functions.
+     */
+    function onTransferReceived(
+        address operator,
+        address from,
+        uint256 value,
+        bytes calldata data
+    )
+        external
+        returns (bytes4);
+
+    /**
+     * @notice Called when an approval is received through the ERC1363's
+     *         {approveAndCall} function.
+     */
+    function onApprovalReceived(
+        address owner,
+        uint256 value,
+        bytes calldata data
+    )
+        external
+        returns (bytes4);
 }
