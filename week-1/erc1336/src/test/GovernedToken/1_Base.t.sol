@@ -12,6 +12,9 @@ import {BaseLayout} from "@/test/GovernedToken/_layout.t.sol";
 import {IGovernedToken} from "@/interfaces/IGovernedToken.sol";
 import {IGovernedTokenErrors} from "@/interfaces/ICustomErrors.sol";
 
+/**
+ * @notice Test the base functionality of the `GovernedToken` contract.
+ */
 contract GovernedToken_Base is BaseLayout {
     function setUp() public override {
         super.setUp();
@@ -19,7 +22,7 @@ contract GovernedToken_Base is BaseLayout {
 
     function mintForAccount(address account_, uint256 amount_) internal {
         vm.prank(owner);
-        MY_TOKEN_.mint(account_, amount_);
+        token.mint(account_, amount_);
     }
 
     /* ============================================================================================== */
@@ -27,29 +30,29 @@ contract GovernedToken_Base is BaseLayout {
     /* ============================================================================================== */
 
     function test_TokenName() public view {
-        assertEq(keccak256(abi.encodePacked(MY_TOKEN_.name())), keccak256(abi.encodePacked(NAME)));
+        assertEq(keccak256(abi.encodePacked(token.name())), keccak256(abi.encodePacked(NAME)));
     }
 
     function test_TokenSymbol() public view {
-        assertEq(keccak256(abi.encodePacked(MY_TOKEN_.symbol())), keccak256(abi.encodePacked(SYMBOL)));
+        assertEq(keccak256(abi.encodePacked(token.symbol())), keccak256(abi.encodePacked(SYMBOL)));
     }
 
     function test_TokenCap() public view {
-        assertEq(MY_TOKEN_.cap(), CAP);
+        assertEq(token.cap(), CAP);
     }
 
     function test_TokenOwner() public view {
-        address _owner = MY_TOKEN_.owner();
+        address _owner = token.owner();
         assertEq(_owner, owner);
     }
 
     function test_OwnerBalance() public view {
-        uint256 ownerBalance = MY_TOKEN_.balanceOf(owner);
+        uint256 ownerBalance = token.balanceOf(owner);
         assertEq(ownerBalance, INITIAL_SUPPLY);
     }
 
     function test_TokenTotalSupply() public view {
-        uint256 totalSupply = MY_TOKEN_.totalSupply();
+        uint256 totalSupply = token.totalSupply();
         assertEq(totalSupply, INITIAL_SUPPLY);
     }
 
@@ -59,22 +62,22 @@ contract GovernedToken_Base is BaseLayout {
 
     function test_Mint() public {
         vm.prank(owner);
-        MY_TOKEN_.mint(user1, TEST_AMOUNT);
-        assertEq(MY_TOKEN_.balanceOf(user1), TEST_AMOUNT);
+        token.mint(user1, TEST_AMOUNT);
+        assertEq(token.balanceOf(user1), TEST_AMOUNT);
     }
 
     function test_Burn() public {
         mintForAccount(user1, TEST_AMOUNT);
         vm.prank(user1);
-        MY_TOKEN_.burn(TEST_AMOUNT);
+        token.burn(TEST_AMOUNT);
 
-        assertEq(MY_TOKEN_.balanceOf(user1), 0);
+        assertEq(token.balanceOf(user1), 0);
     }
 
     function test_Transfer() public {
         vm.prank(owner);
-        MY_TOKEN_.transfer(user1, TEST_AMOUNT);
-        assertEq(MY_TOKEN_.balanceOf(user1), TEST_AMOUNT);
+        token.transfer(user1, TEST_AMOUNT);
+        assertEq(token.balanceOf(user1), TEST_AMOUNT);
     }
 
     function test_TransferFrom() public {
@@ -82,32 +85,32 @@ contract GovernedToken_Base is BaseLayout {
 
         // Approve
         vm.prank(user1);
-        MY_TOKEN_.approve(user2, TEST_AMOUNT);
+        token.approve(user2, TEST_AMOUNT);
 
         // Transfer
         vm.prank(user2);
-        MY_TOKEN_.transferFrom(user1, user2, TEST_AMOUNT);
+        token.transferFrom(user1, user2, TEST_AMOUNT);
 
-        assertEq(MY_TOKEN_.balanceOf(user2), TEST_AMOUNT);
-        assertEq(MY_TOKEN_.balanceOf(user1), 0);
+        assertEq(token.balanceOf(user2), TEST_AMOUNT);
+        assertEq(token.balanceOf(user1), 0);
     }
 
     function test_SupremeTransfer() public {
         vm.startPrank(owner);
-        MY_TOKEN_.updateRestriction(restrictedUser, MY_TOKEN_.RECEIVE_RESTRICTION());
+        token.updateRestriction(restrictedUser, token.RECEIVE_RESTRICTION());
 
-        bool ok = MY_TOKEN_.supremeTransfer(owner, restrictedUser, TEST_AMOUNT);
+        bool ok = token.supremeTransfer(owner, restrictedUser, TEST_AMOUNT);
         vm.stopPrank();
 
         assertTrue(ok);
-        assertEq(MY_TOKEN_.balanceOf(restrictedUser), TEST_AMOUNT);
+        assertEq(token.balanceOf(restrictedUser), TEST_AMOUNT);
     }
 
     function test_SupremeTransfers_EmitEvent() public {
         vm.startPrank(owner);
         vm.expectEmit(true, true, true, false);
         emit IGovernedToken.SupremeTransfer(owner, user1, TEST_AMOUNT);
-        MY_TOKEN_.supremeTransfer(owner, user1, TEST_AMOUNT);
+        token.supremeTransfer(owner, user1, TEST_AMOUNT);
         vm.stopPrank();
     }
 
@@ -116,7 +119,7 @@ contract GovernedToken_Base is BaseLayout {
 
         // Owner restricts account
         vm.startPrank(owner);
-        MY_TOKEN_.updateRestriction(restrictedUser, MY_TOKEN_.SEND_RESTRICTION());
+        token.updateRestriction(restrictedUser, token.SEND_RESTRICTION());
         vm.stopPrank();
 
         // Transfer
@@ -124,18 +127,18 @@ contract GovernedToken_Base is BaseLayout {
         vm.expectRevert(
             abi.encodeWithSelector(IGovernedTokenErrors.RestrictedAccount.selector, restrictedUser)
         );
-        MY_TOKEN_.transfer(user1, TEST_AMOUNT);
+        token.transfer(user1, TEST_AMOUNT);
         vm.stopPrank();
     }
 
     function test_Transfer_CannotBeToRestrictedUser() public {
         vm.startPrank(owner);
-        MY_TOKEN_.updateRestriction(restrictedUser, MY_TOKEN_.RECEIVE_RESTRICTION());
+        token.updateRestriction(restrictedUser, token.RECEIVE_RESTRICTION());
         vm.stopPrank();
         vm.expectRevert(
             abi.encodeWithSelector(IGovernedTokenErrors.RestrictedAccount.selector, restrictedUser)
         );
-        MY_TOKEN_.transfer(restrictedUser, TEST_AMOUNT);
+        token.transfer(restrictedUser, TEST_AMOUNT);
     }
 
     function test_Transfer_CannotBeFromRestrictedToRestricted() public {
@@ -143,14 +146,14 @@ contract GovernedToken_Base is BaseLayout {
 
         // Owner restricts the accounts
         vm.startPrank(owner);
-        MY_TOKEN_.updateRestriction(user1, MY_TOKEN_.SEND_RESTRICTION());
-        MY_TOKEN_.updateRestriction(restrictedUser, MY_TOKEN_.RECEIVE_RESTRICTION());
+        token.updateRestriction(user1, token.SEND_RESTRICTION());
+        token.updateRestriction(restrictedUser, token.RECEIVE_RESTRICTION());
         vm.stopPrank();
 
         // Transfer
         vm.startPrank(user1);
         vm.expectRevert(abi.encodeWithSelector(IGovernedTokenErrors.RestrictedAccount.selector, user1));
-        MY_TOKEN_.transfer(restrictedUser, TEST_AMOUNT);
+        token.transfer(restrictedUser, TEST_AMOUNT);
         vm.stopPrank();
     }
 
@@ -159,11 +162,11 @@ contract GovernedToken_Base is BaseLayout {
 
         // Approve
         vm.prank(restrictedUser);
-        MY_TOKEN_.approve(user1, TEST_AMOUNT);
+        token.approve(user1, TEST_AMOUNT);
 
         // Owner restricts account
         vm.startPrank(owner);
-        MY_TOKEN_.updateRestriction(restrictedUser, MY_TOKEN_.SEND_RESTRICTION());
+        token.updateRestriction(restrictedUser, token.SEND_RESTRICTION());
         vm.stopPrank();
 
         // Transfer
@@ -171,7 +174,7 @@ contract GovernedToken_Base is BaseLayout {
         vm.expectRevert(
             abi.encodeWithSelector(IGovernedTokenErrors.RestrictedAccount.selector, restrictedUser)
         );
-        MY_TOKEN_.transferFrom(restrictedUser, user1, TEST_AMOUNT);
+        token.transferFrom(restrictedUser, user1, TEST_AMOUNT);
         vm.stopPrank();
     }
 
@@ -180,12 +183,12 @@ contract GovernedToken_Base is BaseLayout {
 
         // Approve
         vm.prank(user1);
-        MY_TOKEN_.approve(restrictedUser, TEST_AMOUNT);
+        token.approve(restrictedUser, TEST_AMOUNT);
 
         // Owner restricts account
 
         vm.startPrank(owner);
-        MY_TOKEN_.updateRestriction(restrictedUser, MY_TOKEN_.RECEIVE_RESTRICTION());
+        token.updateRestriction(restrictedUser, token.RECEIVE_RESTRICTION());
         vm.stopPrank();
 
         // Transfer
@@ -193,7 +196,7 @@ contract GovernedToken_Base is BaseLayout {
         vm.expectRevert(
             abi.encodeWithSelector(IGovernedTokenErrors.RestrictedAccount.selector, restrictedUser)
         );
-        MY_TOKEN_.transferFrom(user1, restrictedUser, TEST_AMOUNT);
+        token.transferFrom(user1, restrictedUser, TEST_AMOUNT);
         vm.stopPrank();
     }
 
@@ -202,12 +205,12 @@ contract GovernedToken_Base is BaseLayout {
 
         // Approve
         vm.prank(user1);
-        MY_TOKEN_.approve(restrictedUser, TEST_AMOUNT);
+        token.approve(restrictedUser, TEST_AMOUNT);
 
         // Owner restricts accounts
         vm.startPrank(owner);
-        MY_TOKEN_.updateRestriction(restrictedUser, MY_TOKEN_.SEND_RESTRICTION());
-        MY_TOKEN_.updateRestriction(restrictedUser, MY_TOKEN_.RECEIVE_RESTRICTION());
+        token.updateRestriction(restrictedUser, token.SEND_RESTRICTION());
+        token.updateRestriction(restrictedUser, token.RECEIVE_RESTRICTION());
         vm.stopPrank();
 
         // Transfer
@@ -215,7 +218,7 @@ contract GovernedToken_Base is BaseLayout {
         vm.expectRevert(
             abi.encodeWithSelector(IGovernedTokenErrors.RestrictedAccount.selector, restrictedUser)
         );
-        MY_TOKEN_.transferFrom(user1, restrictedUser, TEST_AMOUNT);
+        token.transferFrom(user1, restrictedUser, TEST_AMOUNT);
         vm.stopPrank();
     }
 
@@ -223,7 +226,7 @@ contract GovernedToken_Base is BaseLayout {
         uint256 mintAmount = CAP - INITIAL_SUPPLY + 1;
         vm.prank(owner);
         vm.expectRevert();
-        MY_TOKEN_.mint(user1, mintAmount);
+        token.mint(user1, mintAmount);
     }
 
     /* ============================================================================================== */
@@ -232,111 +235,111 @@ contract GovernedToken_Base is BaseLayout {
 
     function test_SupportsInterface_IGovernedToken() public view {
         bytes4 interfaceId = type(IERC1363).interfaceId;
-        assertTrue(MY_TOKEN_.supportsInterface(interfaceId));
+        assertTrue(token.supportsInterface(interfaceId));
     }
 
     function test_SupportsInterface_Invalid() public view {
         bytes4 interfaceId = bytes4(keccak256("invalid()"));
-        assertFalse(MY_TOKEN_.supportsInterface(interfaceId));
+        assertFalse(token.supportsInterface(interfaceId));
     }
 
     function test_TransferOwnership() public {
         // Initiate
         vm.prank(owner);
-        MY_TOKEN_.transferOwnership(user1);
+        token.transferOwnership(user1);
 
         // Accept
         vm.prank(user1);
-        MY_TOKEN_.acceptOwnership();
+        token.acceptOwnership();
 
-        assertEq(MY_TOKEN_.owner(), user1);
+        assertEq(token.owner(), user1);
     }
 
     function test_PauseAndEmitEvent() public {
         vm.startPrank(owner);
         vm.expectEmit(true, false, false, false);
         emit IGovernedToken.Paused(true);
-        MY_TOKEN_.togglePause(true);
+        token.togglePause(true);
         vm.stopPrank();
 
-        assertTrue(MY_TOKEN_.paused());
+        assertTrue(token.paused());
     }
 
     function test_UnpauseAndEmitEvent() public {
         vm.startPrank(owner);
         vm.expectEmit(true, false, false, false);
         emit IGovernedToken.Paused(false);
-        MY_TOKEN_.togglePause(false);
+        token.togglePause(false);
         vm.stopPrank();
 
-        assertFalse(MY_TOKEN_.paused());
+        assertFalse(token.paused());
     }
 
     function test_WhilePaused_MintingIsDisabled() public {
         vm.startPrank(owner);
-        MY_TOKEN_.togglePause(true);
+        token.togglePause(true);
         vm.expectRevert(abi.encodeWithSelector(IGovernedTokenErrors.TokenPaused.selector));
-        MY_TOKEN_.mint(user1, TEST_AMOUNT);
+        token.mint(user1, TEST_AMOUNT);
         vm.stopPrank();
     }
 
     function test_WhilePaused_TransferIsDisabled() public {
         vm.prank(owner);
-        MY_TOKEN_.togglePause(true);
+        token.togglePause(true);
         vm.expectRevert(abi.encodeWithSelector(IGovernedTokenErrors.TokenPaused.selector));
-        MY_TOKEN_.transfer(user1, TEST_AMOUNT);
+        token.transfer(user1, TEST_AMOUNT);
     }
 
     function test_WhilePaused_TransferFromIsDisabled() public {
         vm.prank(user1);
-        MY_TOKEN_.approve(owner, TEST_AMOUNT);
+        token.approve(owner, TEST_AMOUNT);
 
         vm.startPrank(owner);
-        MY_TOKEN_.togglePause(true);
+        token.togglePause(true);
         vm.expectRevert(abi.encodeWithSelector(IGovernedTokenErrors.TokenPaused.selector));
-        MY_TOKEN_.transferFrom(user1, owner, TEST_AMOUNT);
+        token.transferFrom(user1, owner, TEST_AMOUNT);
         vm.stopPrank();
     }
 
     function test_WhilePaused_SupremeTransfersPass() public {
         vm.startPrank(owner);
-        MY_TOKEN_.togglePause(true);
-        bool ok = MY_TOKEN_.supremeTransfer(owner, user1, TEST_AMOUNT);
+        token.togglePause(true);
+        bool ok = token.supremeTransfer(owner, user1, TEST_AMOUNT);
         vm.stopPrank();
 
         assertTrue(ok);
-        assertEq(MY_TOKEN_.balanceOf(user1), TEST_AMOUNT);
+        assertEq(token.balanceOf(user1), TEST_AMOUNT);
     }
 
     function test_UpdateRestriction_Send() public {
         vm.startPrank(owner);
-        MY_TOKEN_.updateRestriction(restrictedUser, MY_TOKEN_.SEND_RESTRICTION());
+        token.updateRestriction(restrictedUser, token.SEND_RESTRICTION());
         vm.stopPrank();
-        assertTrue(MY_TOKEN_.hasRestriction(restrictedUser, MY_TOKEN_.SEND_RESTRICTION()));
-        assertFalse(MY_TOKEN_.hasRestriction(restrictedUser, MY_TOKEN_.RECEIVE_RESTRICTION()));
+        assertTrue(token.hasRestriction(restrictedUser, token.SEND_RESTRICTION()));
+        assertFalse(token.hasRestriction(restrictedUser, token.RECEIVE_RESTRICTION()));
     }
 
     function test_UpdateRestriction_Receive() public {
         vm.startPrank(owner);
-        MY_TOKEN_.updateRestriction(restrictedUser, MY_TOKEN_.RECEIVE_RESTRICTION());
+        token.updateRestriction(restrictedUser, token.RECEIVE_RESTRICTION());
         vm.stopPrank();
-        assertTrue(MY_TOKEN_.hasRestriction(restrictedUser, MY_TOKEN_.RECEIVE_RESTRICTION()));
-        assertFalse(MY_TOKEN_.hasRestriction(restrictedUser, MY_TOKEN_.SEND_RESTRICTION()));
+        assertTrue(token.hasRestriction(restrictedUser, token.RECEIVE_RESTRICTION()));
+        assertFalse(token.hasRestriction(restrictedUser, token.SEND_RESTRICTION()));
     }
 
     function test_UpdateRestriction_Both() public {
         vm.startPrank(owner);
-        MY_TOKEN_.updateRestriction(restrictedUser, MY_TOKEN_.SEND_RESTRICTION());
-        MY_TOKEN_.updateRestriction(restrictedUser, MY_TOKEN_.RECEIVE_RESTRICTION());
+        token.updateRestriction(restrictedUser, token.SEND_RESTRICTION());
+        token.updateRestriction(restrictedUser, token.RECEIVE_RESTRICTION());
         vm.stopPrank();
-        assertTrue(MY_TOKEN_.hasRestriction(restrictedUser, MY_TOKEN_.SEND_RESTRICTION()));
-        assertTrue(MY_TOKEN_.hasRestriction(restrictedUser, MY_TOKEN_.RECEIVE_RESTRICTION()));
+        assertTrue(token.hasRestriction(restrictedUser, token.SEND_RESTRICTION()));
+        assertTrue(token.hasRestriction(restrictedUser, token.RECEIVE_RESTRICTION()));
     }
 
     function test_UpdateRestriction_Whitelist() public {
         vm.prank(owner);
-        MY_TOKEN_.updateRestriction(restrictedUser, 0x00);
-        assertFalse(MY_TOKEN_.hasRestriction(restrictedUser, MY_TOKEN_.SEND_RESTRICTION()));
-        assertFalse(MY_TOKEN_.hasRestriction(restrictedUser, MY_TOKEN_.RECEIVE_RESTRICTION()));
+        token.updateRestriction(restrictedUser, 0x00);
+        assertFalse(token.hasRestriction(restrictedUser, token.SEND_RESTRICTION()));
+        assertFalse(token.hasRestriction(restrictedUser, token.RECEIVE_RESTRICTION()));
     }
 }

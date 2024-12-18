@@ -10,6 +10,9 @@ pragma solidity 0.8.26;
 import {BaseLayout} from "@/test/GovernedToken/_layout.t.sol";
 import {IGovernedTokenErrors} from "@/interfaces/ICustomErrors.sol";
 
+/**
+ * @notice Test by attacking the `GovernedToken` contract.
+ */
 contract GovernedToken_Attack is BaseLayout {
     function setUp() public override {
         super.setUp();
@@ -17,7 +20,7 @@ contract GovernedToken_Attack is BaseLayout {
 
     function mintForAccount(address account_, uint256 amount_) internal {
         vm.prank(owner);
-        MY_TOKEN_.mint(account_, amount_);
+        token.mint(account_, amount_);
     }
 
     /* ============================================================================================== */
@@ -25,22 +28,22 @@ contract GovernedToken_Attack is BaseLayout {
     /* ============================================================================================== */
 
     function test_TransferZeroTokens() public {
-        uint256 initialBalance = MY_TOKEN_.balanceOf(owner);
+        uint256 initialBalance = token.balanceOf(owner);
         vm.prank(owner);
-        MY_TOKEN_.transfer(user1, 0);
-        assertEq(MY_TOKEN_.balanceOf(owner), initialBalance);
+        token.transfer(user1, 0);
+        assertEq(token.balanceOf(owner), initialBalance);
     }
 
     function test_SupremeTransfer_ZeroAmount() public {
-        uint256 initBalanceFrom = MY_TOKEN_.balanceOf(owner);
-        uint256 initBalanceTo = MY_TOKEN_.balanceOf(user1);
+        uint256 initBalanceFrom = token.balanceOf(owner);
+        uint256 initBalanceTo = token.balanceOf(user1);
 
         vm.prank(owner);
-        bool ok = MY_TOKEN_.supremeTransfer(owner, user1, 0);
+        bool ok = token.supremeTransfer(owner, user1, 0);
 
         assertTrue(ok);
-        assertEq(MY_TOKEN_.balanceOf(owner), initBalanceFrom);
-        assertEq(MY_TOKEN_.balanceOf(user1), initBalanceTo);
+        assertEq(token.balanceOf(owner), initBalanceFrom);
+        assertEq(token.balanceOf(user1), initBalanceTo);
     }
 
     /* ============================================================================================== */
@@ -52,12 +55,12 @@ contract GovernedToken_Attack is BaseLayout {
 
         mintForAccount(account, TEST_AMOUNT);
         vm.startPrank(owner);
-        MY_TOKEN_.updateRestriction(account, MY_TOKEN_.SEND_RESTRICTION());
+        token.updateRestriction(account, token.SEND_RESTRICTION());
         vm.stopPrank();
 
         vm.startPrank(account);
         vm.expectRevert(abi.encodeWithSelector(IGovernedTokenErrors.RestrictedAccount.selector, account));
-        MY_TOKEN_.transfer(user1, TEST_AMOUNT);
+        token.transfer(user1, TEST_AMOUNT);
         vm.stopPrank();
     }
 
